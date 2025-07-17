@@ -34,7 +34,7 @@ A Python script that searches for JIRA issues moved to "Done" status within a da
 3. **Authentication:**
    - Uses basic authentication with JIRA username and password
    - No API tokens required
-   - Ensure your JIRA username is correct (may be different from email)
+   - Ensure your JIRA username is correct (may be different from your email)
    - Interactive prompts provide the most secure credential handling
    - Includes timeout and error handling for corporate network compatibility
 
