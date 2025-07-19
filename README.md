@@ -60,6 +60,21 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
   --password your_password
 ```
 
+### With component analysis:
+```bash
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis
+```
+
+### With markdown output (for Confluence):
+```bash
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --markdown
+```
+
+### With both features:
+```bash
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --markdown
+```
+
 
 ## Parameters
 
@@ -109,6 +124,8 @@ The script searches for issues in the specified project that had their status ch
 - **Status Tracking**: Shows exact dates when issues moved to In Progress and Done
 - **Summary Statistics**: Average, min, max cycle times across all found issues
 - **Flexible Status Mapping**: Recognizes various status names (In Progress, In Development, etc.)
+- **Component Analysis**: Break down cycle times by JIRA component with rankings
+- **Markdown Output**: Generate Confluence-ready reports with tables and formatting
 
 ## JQL Query
 
@@ -123,6 +140,7 @@ labels = "urgent" AND
 
 ## Sample Output
 
+### Regular Console Output
 ```
 📋 PROJ-123: Fix login bug
      Labels: ['bug', 'urgent']
@@ -137,4 +155,35 @@ labels = "urgent" AND
    Min cycle time: 1 days
    Max cycle time: 8 days
    Total cycle time: 21 days
+
+🏆 COMPONENT RANKING (by average cycle time):
+   1. backend-service: 5.5 days avg (3 tickets)
+   2. frontend-ui: 3.2 days avg (2 tickets)
+
+🔧 COMPONENT ANALYSIS:
+📦 backend-service (3 tickets):
+     📋 PROJ-123: Fix login bug - 5 days
+     📊 Summary: Avg: 5.5d, Min: 3d, Max: 8d, Total: 16d
+```
+
+### Markdown Output (for Confluence)
+```markdown
+# JIRA Cycle Time Analysis
+
+## Search Criteria
+- **Project:** PROJ
+- **Delivery Team:** Frontend Team  
+- **Labels:** bug, urgent
+- **Date Range:** 2024-01-01 to 2024-01-31
+
+## 📊 CYCLE TIME SUMMARY
+- **Average cycle time:** 4.2 days
+- **Min cycle time:** 1 days
+- **Max cycle time:** 8 days
+
+## 🏆 COMPONENT RANKING
+| Rank | Component | Avg Days | Tickets |
+|------|-----------|----------|---------|
+| 1 | backend-service | 5.5 | 3 |
+| 2 | frontend-ui | 3.2 | 2 |
 ```
