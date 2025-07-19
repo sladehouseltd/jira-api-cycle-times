@@ -138,6 +138,18 @@ def parse_arguments():
         help='Comma-separated list of statuses considered "Done" [default: Done,Closed,Resolved,Completed]'
     )
     
+    parser.add_argument(
+        '--component-analysis',
+        action='store_true',
+        help='Show cycle time analysis broken down by component'
+    )
+    
+    parser.add_argument(
+        '--markdown',
+        action='store_true',
+        help='Output results in markdown format (suitable for Confluence)'
+    )
+    
     return parser.parse_args()
 
 
@@ -209,7 +221,7 @@ class JiraClient:
         params = {
             'jql': jql,
             'maxResults': 1000,  # Adjust as needed
-            'fields': 'key,summary,status,labels,assignee,created,updated,description',
+            'fields': 'key,summary,status,labels,assignee,created,updated,description,components',
             'expand': 'changelog'  # Include status change history
         }
         
@@ -289,6 +301,196 @@ class JiraClient:
         }
 
 
+def analyze_components(issues: List[Dict], jira_client, in_progress_statuses: List[str], done_statuses: List[str]) -> Dict:
+    """Analyze cycle times by component."""
+    component_data = {}
+    
+    for issue in issues:
+        issue_key = issue['key']
+        summary = issue['fields']['summary']
+        components = issue['fields'].get('components', [])
+        
+        # Calculate cycle time for this issue
+        cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
+        cycle_time = cycle_info['cycle_time_days']
+        
+        # If no cycle time data, skip this issue
+        if cycle_time is None:
+            continue
+            
+        # Extract component names
+        component_names = [comp['name'] for comp in components] if components else ['No components']
+        
+        # Add this issue to each component it belongs to
+        for component_name in component_names:
+            if component_name not in component_data:
+                component_data[component_name] = []
+            
+            component_data[component_name].append({
+                'key': issue_key,
+                'summary': summary,
+                'cycle_time': cycle_time,
+                'cycle_info': cycle_info
+            })
+    
+    return component_data
+
+
+def display_component_analysis(component_data: Dict):
+    """Display component analysis with rankings."""
+    if not component_data:
+        print("\n🔧 COMPONENT ANALYSIS:")
+        print("   No issues with cycle time data found.")
+        return
+    
+    # Calculate statistics for each component
+    component_stats = {}
+    for component, tickets in component_data.items():
+        if tickets:
+            cycle_times = [ticket['cycle_time'] for ticket in tickets]
+            component_stats[component] = {
+                'count': len(tickets),
+                'total': sum(cycle_times),
+                'average': sum(cycle_times) / len(cycle_times),
+                'min': min(cycle_times),
+                'max': max(cycle_times),
+                'tickets': tickets
+            }
+    
+    # Display ranked summary first
+    print("\n🏆 COMPONENT RANKING (by average cycle time):")
+    sorted_components = sorted(component_stats.items(), key=lambda x: x[1]['average'], reverse=True)
+    
+    for i, (component, stats) in enumerate(sorted_components, 1):
+        print(f"   {i}. {component}: {stats['average']:.1f} days avg ({stats['count']} tickets)")
+    
+    # Display detailed analysis
+    print("\n🔧 COMPONENT ANALYSIS:")
+    
+    for component, stats in sorted_components:
+        print(f"\n📦 {component} ({stats['count']} tickets):")
+        
+        # List individual tickets
+        for ticket in stats['tickets']:
+            cycle_info = ticket['cycle_info']
+            if cycle_info['in_progress_date'] and cycle_info['done_date']:
+                in_progress_str = cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M')
+                done_str = cycle_info['done_date'].strftime('%Y-%m-%d %H:%M')
+                print(f"     📋 {ticket['key']}: {ticket['summary']}")
+                print(f"         📅 In Progress: {in_progress_str}")
+                print(f"         ✅ Done: {done_str}")
+                print(f"         ⏱️  Cycle Time: {ticket['cycle_time']} days")
+            else:
+                print(f"     📋 {ticket['key']}: {ticket['summary']} - {ticket['cycle_time']} days")
+        
+        # Component statistics
+        print(f"     📊 Summary: Avg: {stats['average']:.1f}d, Min: {stats['min']}d, Max: {stats['max']}d, Total: {stats['total']}d")
+
+
+def format_markdown_summary(valid_cycle_times: List[int], total_cycle_time: int, issues_count: int) -> str:
+    """Format overall cycle time summary in markdown."""
+    if not valid_cycle_times:
+        return "\n## 📊 CYCLE TIME SUMMARY\n\n⚠️ No cycle time data available for any issues\n"
+    
+    avg_cycle_time = total_cycle_time / len(valid_cycle_times)
+    min_cycle_time = min(valid_cycle_times)
+    max_cycle_time = max(valid_cycle_times)
+    
+    markdown = "\n## 📊 CYCLE TIME SUMMARY\n\n"
+    markdown += f"- **Issues with cycle time data:** {len(valid_cycle_times)}/{issues_count}\n"
+    markdown += f"- **Average cycle time:** {avg_cycle_time:.1f} days\n"
+    markdown += f"- **Min cycle time:** {min_cycle_time} days\n"
+    markdown += f"- **Max cycle time:** {max_cycle_time} days\n"
+    markdown += f"- **Total cycle time:** {total_cycle_time} days\n"
+    
+    return markdown
+
+
+def format_markdown_issues(issues: List[Dict], jira_client, in_progress_statuses: List[str], done_statuses: List[str]) -> str:
+    """Format individual issues in markdown."""
+    markdown = f"\n## 📋 ISSUES FOUND ({len(issues)} total)\n\n"
+    
+    for issue in issues:
+        issue_key = issue['key']
+        summary = issue['fields']['summary']
+        current_labels = issue['fields'].get('labels', [])
+        
+        cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
+        
+        markdown += f"### {issue_key}: {summary}\n\n"
+        markdown += f"- **Labels:** {current_labels}\n"
+        markdown += f"- **Status:** {issue['fields']['status']['name']}\n"
+        
+        if cycle_info['cycle_time_days'] is not None:
+            in_progress_str = cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M')
+            done_str = cycle_info['done_date'].strftime('%Y-%m-%d %H:%M')
+            markdown += f"- **In Progress:** {in_progress_str}\n"
+            markdown += f"- **Done:** {done_str}\n"
+            markdown += f"- **Cycle Time:** {cycle_info['cycle_time_days']} days\n"
+        else:
+            markdown += f"- **Cycle time:** Unable to calculate (missing status transitions)\n"
+        
+        markdown += "\n"
+    
+    return markdown
+
+
+def format_markdown_component_analysis(component_data: Dict) -> str:
+    """Format component analysis in markdown."""
+    if not component_data:
+        return "\n## 🔧 COMPONENT ANALYSIS\n\nNo issues with cycle time data found.\n"
+    
+    # Calculate statistics for each component
+    component_stats = {}
+    for component, tickets in component_data.items():
+        if tickets:
+            cycle_times = [ticket['cycle_time'] for ticket in tickets]
+            component_stats[component] = {
+                'count': len(tickets),
+                'total': sum(cycle_times),
+                'average': sum(cycle_times) / len(cycle_times),
+                'min': min(cycle_times),
+                'max': max(cycle_times),
+                'tickets': tickets
+            }
+    
+    markdown = "\n## 🏆 COMPONENT RANKING (by average cycle time)\n\n"
+    sorted_components = sorted(component_stats.items(), key=lambda x: x[1]['average'], reverse=True)
+    
+    # Ranking table
+    markdown += "| Rank | Component | Avg Days | Tickets |\n"
+    markdown += "|------|-----------|----------|----------|\n"
+    
+    for i, (component, stats) in enumerate(sorted_components, 1):
+        markdown += f"| {i} | {component} | {stats['average']:.1f} | {stats['count']} |\n"
+    
+    # Detailed analysis
+    markdown += "\n## 🔧 COMPONENT ANALYSIS\n\n"
+    
+    for component, stats in sorted_components:
+        markdown += f"### 📦 {component} ({stats['count']} tickets)\n\n"
+        
+        # Component summary
+        markdown += f"**Summary:** Avg: {stats['average']:.1f}d, Min: {stats['min']}d, Max: {stats['max']}d, Total: {stats['total']}d\n\n"
+        
+        # Tickets table
+        markdown += "| Ticket | Summary | In Progress | Done | Cycle Time |\n"
+        markdown += "|--------|---------|-------------|------|------------|\n"
+        
+        for ticket in stats['tickets']:
+            cycle_info = ticket['cycle_info']
+            if cycle_info['in_progress_date'] and cycle_info['done_date']:
+                in_progress_str = cycle_info['in_progress_date'].strftime('%Y-%m-%d')
+                done_str = cycle_info['done_date'].strftime('%Y-%m-%d')
+                markdown += f"| {ticket['key']} | {ticket['summary']} | {in_progress_str} | {done_str} | {ticket['cycle_time']} days |\n"
+            else:
+                markdown += f"| {ticket['key']} | {ticket['summary']} | - | - | {ticket['cycle_time']} days |\n"
+        
+        markdown += "\n"
+    
+    return markdown
+
+
 def main():
     """Main function."""
     try:
@@ -351,51 +553,87 @@ def main():
                 )
                 
                 if not issues:
-                    print(f"✓ No issues found matching the criteria")
+                    if args.markdown:
+                        print("# JIRA Cycle Time Analysis\n\nNo issues found matching the criteria.")
+                    else:
+                        print(f"✓ No issues found matching the criteria")
                     return
                 
-                print(f"✓ Found {len(issues)} issue(s) matching criteria:")
-                
+                # Calculate cycle times for all issues
                 total_cycle_time = 0
                 valid_cycle_times = []
                 
                 for issue in issues:
-                    issue_key = issue['key']
-                    summary = issue['fields']['summary']
-                    current_labels = issue['fields'].get('labels', [])
-                    
-                    # Calculate cycle time
                     cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
-                    
-                    print(f"\n  📋 {issue_key}: {summary}")
-                    print(f"      Labels: {current_labels}")
-                    print(f"      Status: {issue['fields']['status']['name']}")
-                    
-                    # Display cycle time information
                     if cycle_info['cycle_time_days'] is not None:
-                        print(f"      📅 In Progress: {cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M')}")
-                        print(f"      ✅ Done: {cycle_info['done_date'].strftime('%Y-%m-%d %H:%M')}")
-                        print(f"      ⏱️  Cycle Time: {cycle_info['cycle_time_days']} days")
-                        
                         valid_cycle_times.append(cycle_info['cycle_time_days'])
                         total_cycle_time += cycle_info['cycle_time_days']
-                    else:
-                        print(f"      ⚠️  Cycle time: Unable to calculate (missing status transitions)")
                 
-                # Display summary statistics
-                if valid_cycle_times:
-                    avg_cycle_time = total_cycle_time / len(valid_cycle_times)
-                    min_cycle_time = min(valid_cycle_times)
-                    max_cycle_time = max(valid_cycle_times)
+                # Generate output based on format
+                if args.markdown:
+                    # Markdown output with search criteria header
+                    print("# JIRA Cycle Time Analysis")
+                    print(f"\n## Search Criteria")
+                    print(f"- **Project:** {args.project_key}")
+                    print(f"- **Delivery Team:** {args.delivery_team}")
+                    print(f"- **Labels:** {', '.join(labels_list)}")
+                    print(f"- **Date Range:** {args.start_date} to {args.end_date}")
+                    print(f"\n**Found {len(issues)} issue(s) matching criteria**")
                     
-                    print(f"\n📊 CYCLE TIME SUMMARY:")
-                    print(f"   Issues with cycle time data: {len(valid_cycle_times)}/{len(issues)}")
-                    print(f"   Average cycle time: {avg_cycle_time:.1f} days")
-                    print(f"   Min cycle time: {min_cycle_time} days")
-                    print(f"   Max cycle time: {max_cycle_time} days")
-                    print(f"   Total cycle time: {total_cycle_time} days")
+                    # Overall summary first
+                    print(format_markdown_summary(valid_cycle_times, total_cycle_time, len(issues)))
+                    
+                    # Component analysis if requested
+                    if args.component_analysis:
+                        component_data = analyze_components(issues, jira_client, in_progress_statuses, done_statuses)
+                        print(format_markdown_component_analysis(component_data))
+                    
+                    # Issues details last
+                    print(format_markdown_issues(issues, jira_client, in_progress_statuses, done_statuses))
+                        
                 else:
-                    print(f"\n⚠️  No cycle time data available for any issues")
+                    # Regular console output
+                    print(f"✓ Found {len(issues)} issue(s) matching criteria:")
+                    
+                    for issue in issues:
+                        issue_key = issue['key']
+                        summary = issue['fields']['summary']
+                        current_labels = issue['fields'].get('labels', [])
+                        
+                        # Calculate cycle time
+                        cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
+                        
+                        print(f"\n  📋 {issue_key}: {summary}")
+                        print(f"      Labels: {current_labels}")
+                        print(f"      Status: {issue['fields']['status']['name']}")
+                        
+                        # Display cycle time information
+                        if cycle_info['cycle_time_days'] is not None:
+                            print(f"      📅 In Progress: {cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M')}")
+                            print(f"      ✅ Done: {cycle_info['done_date'].strftime('%Y-%m-%d %H:%M')}")
+                            print(f"      ⏱️  Cycle Time: {cycle_info['cycle_time_days']} days")
+                        else:
+                            print(f"      ⚠️  Cycle time: Unable to calculate (missing status transitions)")
+                    
+                    # Display summary statistics
+                    if valid_cycle_times:
+                        avg_cycle_time = total_cycle_time / len(valid_cycle_times)
+                        min_cycle_time = min(valid_cycle_times)
+                        max_cycle_time = max(valid_cycle_times)
+                        
+                        print(f"\n📊 CYCLE TIME SUMMARY:")
+                        print(f"   Issues with cycle time data: {len(valid_cycle_times)}/{len(issues)}")
+                        print(f"   Average cycle time: {avg_cycle_time:.1f} days")
+                        print(f"   Min cycle time: {min_cycle_time} days")
+                        print(f"   Max cycle time: {max_cycle_time} days")
+                        print(f"   Total cycle time: {total_cycle_time} days")
+                    else:
+                        print(f"\n⚠️  No cycle time data available for any issues")
+                    
+                    # Component analysis if requested
+                    if args.component_analysis:
+                        component_data = analyze_components(issues, jira_client, in_progress_statuses, done_statuses)
+                        display_component_analysis(component_data)
                         
             except requests.exceptions.HTTPError as e:
                 if e.response.status_code == 401:
