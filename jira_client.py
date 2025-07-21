@@ -411,7 +411,6 @@ def format_markdown_summary(valid_cycle_times: List[int], total_cycle_time: int,
     markdown += f"- **Average cycle time:** {avg_cycle_time:.1f} days\n"
     markdown += f"- **Min cycle time:** {min_cycle_time} days\n"
     markdown += f"- **Max cycle time:** {max_cycle_time} days\n"
-    markdown += f"- **Total cycle time:** {total_cycle_time} days\n"
     
     return markdown
 
@@ -646,26 +645,25 @@ def format_markdown_label_analysis(label_data: Dict) -> str:
 def format_html_summary(valid_cycle_times: List[int], total_cycle_time: int, issues_count: int) -> str:
     """Format overall cycle time summary in HTML."""
     if not valid_cycle_times:
-        return "\n<h2>📊 Cycle Time Summary</h2>\n<p><strong>⚠️ No cycle time data available for any issues</strong></p>\n"
+        return "<h2>📊 Cycle Time Summary</h2>\n<p><strong>⚠️ No cycle time data available for any issues</strong></p>"
     
     avg_cycle_time = total_cycle_time / len(valid_cycle_times)
     min_cycle_time = min(valid_cycle_times)
     max_cycle_time = max(valid_cycle_times)
     
-    html = "\n<h2>📊 Cycle Time Summary</h2>\n<ul>\n"
+    html = "<h2>📊 Cycle Time Summary</h2>\n<ul>\n"
     html += f"<li><strong>Issues with cycle time data:</strong> {len(valid_cycle_times)}/{issues_count}</li>\n"
     html += f"<li><strong>Average cycle time:</strong> {avg_cycle_time:.1f} days</li>\n"
     html += f"<li><strong>Min cycle time:</strong> {min_cycle_time} days</li>\n"
     html += f"<li><strong>Max cycle time:</strong> {max_cycle_time} days</li>\n"
-    html += f"<li><strong>Total cycle time:</strong> {total_cycle_time} days</li>\n"
-    html += "</ul>\n"
+    html += "</ul>"
     
     return html
 
 
 def format_html_issues(issues: List[Dict], jira_client, in_progress_statuses: List[str], done_statuses: List[str]) -> str:
     """Format individual issues in HTML."""
-    html = f"\n<h2>📋 Issues Found ({len(issues)} total)</h2>\n"
+    html = f"<h2>📋 Issues Found ({len(issues)} total)</h2>"
     
     for issue in issues:
         issue_key = issue['key']
@@ -674,20 +672,20 @@ def format_html_issues(issues: List[Dict], jira_client, in_progress_statuses: Li
         
         cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
         
-        html += f"<h3>{issue_key}: {summary}</h3>\n<ul>\n"
-        html += f"<li><strong>Labels:</strong> {', '.join(current_labels) if current_labels else 'None'}</li>\n"
-        html += f"<li><strong>Status:</strong> {issue['fields']['status']['name']}</li>\n"
+        html += f"\n<h3>{issue_key}: {summary}</h3>\n<ul>"
+        html += f"\n<li><strong>Labels:</strong> {', '.join(current_labels) if current_labels else 'None'}</li>"
+        html += f"\n<li><strong>Status:</strong> {issue['fields']['status']['name']}</li>"
         
         if cycle_info['cycle_time_days'] is not None:
             in_progress_str = cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M')
             done_str = cycle_info['done_date'].strftime('%Y-%m-%d %H:%M')
-            html += f"<li><strong>In Progress:</strong> {in_progress_str}</li>\n"
-            html += f"<li><strong>Done:</strong> {done_str}</li>\n"
-            html += f"<li><strong>Cycle Time:</strong> {cycle_info['cycle_time_days']} days</li>\n"
+            html += f"\n<li><strong>In Progress:</strong> {in_progress_str}</li>"
+            html += f"\n<li><strong>Done:</strong> {done_str}</li>"
+            html += f"\n<li><strong>Cycle Time:</strong> {cycle_info['cycle_time_days']} days</li>"
         else:
-            html += f"<li><strong>Cycle time:</strong> Unable to calculate (missing status transitions)</li>\n"
+            html += f"\n<li><strong>Cycle time:</strong> Unable to calculate (missing status transitions)</li>"
         
-        html += "</ul>\n"
+        html += "\n</ul>"
     
     return html
 
@@ -762,7 +760,7 @@ def main():
                     elif args.output_format == 'confluence':
                         print("h1. JIRA Cycle Time Analysis\n\nNo issues found matching the criteria.")
                     elif args.output_format == 'csv':
-                        print("Issue Key,Summary,Status,Labels,In Progress Date,Done Date,Cycle Time (Days)")
+                        print("Issue Key,Summary,Status,Labels,Components,In Progress Date,Done Date,Cycle Time (Days)")
                     else:
                         print(f"✓ No issues found matching the criteria")
                     return
@@ -805,26 +803,56 @@ def main():
                     print(format_markdown_issues(issues, jira_client, in_progress_statuses, done_statuses))
                 
                 elif args.output_format == 'html':
-                    # HTML output
-                    print("<!DOCTYPE html>")
-                    print("<html><head><title>JIRA Cycle Time Analysis</title></head><body>")
+                    # HTML output (simplified for Confluence)
                     print("<h1>JIRA Cycle Time Analysis</h1>")
-                    print(f"\n<h2>Search Criteria</h2>")
+                    print(f"<h2>Search Criteria</h2>")
                     print(f"<ul>")
                     print(f"<li><strong>Project:</strong> {args.project_key}</li>")
                     print(f"<li><strong>Delivery Team:</strong> {args.delivery_team}</li>")
                     print(f"<li><strong>Labels:</strong> {', '.join(labels_list)}</li>")
                     print(f"<li><strong>Date Range:</strong> {args.start_date} to {args.end_date}</li>")
                     print(f"</ul>")
-                    print(f"\n<p><strong>Found {len(issues)} issue(s) matching criteria</strong></p>")
+                    print(f"<p><strong>Found {len(issues)} issue(s) matching criteria</strong></p>")
                     
                     # Overall summary first
                     print(format_html_summary(valid_cycle_times, total_cycle_time, len(issues)))
                     
+                    # Component analysis if requested
+                    if args.component_analysis:
+                        component_data = analyze_components(issues, jira_client, in_progress_statuses, done_statuses)
+                        if component_data:
+                            # Simple HTML component analysis
+                            print("<h2>🔧 Component Analysis</h2>")
+                            for component, tickets in component_data.items():
+                                if tickets:
+                                    cycle_times = [ticket['cycle_time'] for ticket in tickets]
+                                    avg_cycle = sum(cycle_times) / len(cycle_times)
+                                    print(f"<h3>📦 {component} ({len(tickets)} tickets)</h3>")
+                                    print(f"<p><strong>Average:</strong> {avg_cycle:.1f} days</p>")
+                                    print("<ul>")
+                                    for ticket in tickets:
+                                        print(f"<li>{ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)</li>")
+                                    print("</ul>")
+                    
+                    # Label analysis if requested
+                    if args.label_analysis:
+                        label_data = analyze_labels(issues, jira_client, in_progress_statuses, done_statuses)
+                        if label_data:
+                            # Simple HTML label analysis
+                            print("<h2>🏷️ Label Analysis</h2>")
+                            for label, tickets in label_data.items():
+                                if tickets:
+                                    cycle_times = [ticket['cycle_time'] for ticket in tickets]
+                                    avg_cycle = sum(cycle_times) / len(cycle_times)
+                                    print(f"<h3>🏷️ {label} ({len(tickets)} tickets)</h3>")
+                                    print(f"<p><strong>Average:</strong> {avg_cycle:.1f} days</p>")
+                                    print("<ul>")
+                                    for ticket in tickets:
+                                        print(f"<li>{ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)</li>")
+                                    print("</ul>")
+                    
                     # Issues details
                     print(format_html_issues(issues, jira_client, in_progress_statuses, done_statuses))
-                    
-                    print("</body></html>")
                 
                 elif args.output_format == 'csv':
                     # CSV output
@@ -833,7 +861,7 @@ def main():
                     
                     # Write header
                     writer.writerow([
-                        'Issue Key', 'Summary', 'Status', 'Labels', 
+                        'Issue Key', 'Summary', 'Status', 'Labels', 'Components',
                         'In Progress Date', 'Done Date', 'Cycle Time (Days)'
                     ])
                     
@@ -844,13 +872,17 @@ def main():
                         status = issue['fields']['status']['name']
                         labels = ', '.join(issue['fields'].get('labels', []))
                         
+                        # Get components
+                        components = issue['fields'].get('components', [])
+                        component_names = ', '.join([comp['name'] for comp in components]) if components else ''
+                        
                         cycle_info = jira_client.calculate_cycle_time(issue, in_progress_statuses, done_statuses)
                         
                         in_progress_date = cycle_info['in_progress_date'].strftime('%Y-%m-%d %H:%M') if cycle_info['in_progress_date'] else ''
                         done_date = cycle_info['done_date'].strftime('%Y-%m-%d %H:%M') if cycle_info['done_date'] else ''
                         cycle_time = cycle_info['cycle_time_days'] if cycle_info['cycle_time_days'] is not None else ''
                         
-                        writer.writerow([issue_key, summary, status, labels, in_progress_date, done_date, cycle_time])
+                        writer.writerow([issue_key, summary, status, labels, component_names, in_progress_date, done_date, cycle_time])
                     
                     print(output.getvalue())
                 
@@ -875,10 +907,39 @@ def main():
                         print(f"* *Average cycle time:* {avg_cycle_time:.1f} days")
                         print(f"* *Min cycle time:* {min_cycle_time} days")
                         print(f"* *Max cycle time:* {max_cycle_time} days")
-                        print(f"* *Total cycle time:* {total_cycle_time} days")
                     else:
                         print(f"\nh2. Cycle Time Summary")
                         print(f"*No cycle time data available for any issues*")
+                    
+                    # Component analysis if requested
+                    if args.component_analysis:
+                        component_data = analyze_components(issues, jira_client, in_progress_statuses, done_statuses)
+                        if component_data:
+                            print(f"\nh2. Component Analysis")
+                            for component, tickets in component_data.items():
+                                if tickets:
+                                    cycle_times = [ticket['cycle_time'] for ticket in tickets]
+                                    avg_cycle = sum(cycle_times) / len(cycle_times)
+                                    print(f"\nh3. {component} ({len(tickets)} tickets)")
+                                    print(f"* *Average:* {avg_cycle:.1f} days")
+                                    print(f"* *Issues:*")
+                                    for ticket in tickets:
+                                        print(f"** {ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)")
+                    
+                    # Label analysis if requested
+                    if args.label_analysis:
+                        label_data = analyze_labels(issues, jira_client, in_progress_statuses, done_statuses)
+                        if label_data:
+                            print(f"\nh2. Label Analysis")
+                            for label, tickets in label_data.items():
+                                if tickets:
+                                    cycle_times = [ticket['cycle_time'] for ticket in tickets]
+                                    avg_cycle = sum(cycle_times) / len(cycle_times)
+                                    print(f"\nh3. {label} ({len(tickets)} tickets)")
+                                    print(f"* *Average:* {avg_cycle:.1f} days")
+                                    print(f"* *Issues:*")
+                                    for ticket in tickets:
+                                        print(f"** {ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)")
                     
                     # Issues details
                     print(f"\nh2. Issues Found ({len(issues)} total)")
@@ -938,7 +999,6 @@ def main():
                         print(f"   Average cycle time: {avg_cycle_time:.1f} days")
                         print(f"   Min cycle time: {min_cycle_time} days")
                         print(f"   Max cycle time: {max_cycle_time} days")
-                        print(f"   Total cycle time: {total_cycle_time} days")
                     else:
                         print(f"\n⚠️  No cycle time data available for any issues")
                     

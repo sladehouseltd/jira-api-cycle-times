@@ -80,9 +80,19 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
 python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format markdown
 ```
 
-### With component analysis:
+### With analysis features:
 ```bash
+# Component analysis only
 python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --output-format html
+
+# Label analysis only
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --label-analysis --output-format html
+
+# Both component and label analysis
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format html
+
+# No label filtering (use empty string)
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --output-format html
 ```
 
 
@@ -102,8 +112,8 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
   - `html` - HTML format (recommended for Confluence)
   - `confluence` - Confluence wiki markup (native format)
   - `csv` - CSV format for spreadsheets or table imports
-- `--component-analysis`: Show cycle time breakdown by JIRA component
-- `--label-analysis`: Show cycle time breakdown by labels
+- `--component-analysis`: Show cycle time breakdown by JIRA component (available in all output formats)
+- `--label-analysis`: Show cycle time breakdown by labels (available in all output formats)
 - `--in-progress-statuses`: Comma-separated list of "In Progress" statuses
 - `--done-statuses`: Comma-separated list of "Done" statuses
 
@@ -183,7 +193,6 @@ labels = "urgent" AND
    Average cycle time: 4.2 days
    Min cycle time: 1 days
    Max cycle time: 8 days
-   Total cycle time: 21 days
 
 🏆 COMPONENT RANKING (by average cycle time):
    1. backend-service: 5.5 days avg (3 tickets)
@@ -192,7 +201,13 @@ labels = "urgent" AND
 🔧 COMPONENT ANALYSIS:
 📦 backend-service (3 tickets):
      📋 PROJ-123: Fix login bug - 5 days
-     📊 Summary: Avg: 5.5d, Min: 3d, Max: 8d, Total: 16d
+     📊 Summary: Avg: 5.5d, Min: 3d, Max: 8d
+
+🏷️ LABEL ANALYSIS:
+🏷️ bug (4 tickets):
+     📋 PROJ-123: Fix login bug - 5 days
+     📋 PROJ-124: Button not working - 2 days
+     📊 Summary: Avg: 3.5d, Min: 2d, Max: 5d
 ```
 
 ### Markdown Output (for Confluence)
@@ -215,4 +230,10 @@ labels = "urgent" AND
 |------|-----------|----------|---------|
 | 1 | backend-service | 5.5 | 3 |
 | 2 | frontend-ui | 3.2 | 2 |
+
+## 🏷️ LABEL RANKING
+| Rank | Label | Avg Days | Tickets |
+|------|-------|----------|---------|
+| 1 | urgent | 4.5 | 2 |
+| 2 | bug | 3.5 | 4 |
 ```
