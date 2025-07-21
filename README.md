@@ -65,14 +65,24 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
 python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis
 ```
 
-### With markdown output (for Confluence):
+### With different output formats:
 ```bash
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --markdown
+# HTML output (best for Confluence - paste into source editor)
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format html
+
+# Confluence wiki markup (native Confluence format)
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format confluence
+
+# CSV format (import as tables)
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format csv
+
+# Markdown format
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format markdown
 ```
 
-### With both features:
+### With component analysis:
 ```bash
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --markdown
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --output-format html
 ```
 
 
@@ -83,6 +93,19 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
 - `labels`: Comma-separated labels to filter by (e.g., "bug,urgent,frontend")
 - `start_date`: Start date for search (YYYY-MM-DD)
 - `end_date`: End date for search (YYYY-MM-DD)
+
+## Optional Arguments
+
+- `--output-format`: Choose output format:
+  - `console` (default) - Terminal output with colors and emojis
+  - `markdown` - Markdown format with tables
+  - `html` - HTML format (recommended for Confluence)
+  - `confluence` - Confluence wiki markup (native format)
+  - `csv` - CSV format for spreadsheets or table imports
+- `--component-analysis`: Show cycle time breakdown by JIRA component
+- `--label-analysis`: Show cycle time breakdown by labels
+- `--in-progress-statuses`: Comma-separated list of "In Progress" statuses
+- `--done-statuses`: Comma-separated list of "Done" statuses
 
 ## Security Notes
 
@@ -125,7 +148,13 @@ The script searches for issues in the specified project that had their status ch
 - **Summary Statistics**: Average, min, max cycle times across all found issues
 - **Flexible Status Mapping**: Recognizes various status names (In Progress, In Development, etc.)
 - **Component Analysis**: Break down cycle times by JIRA component with rankings
-- **Markdown Output**: Generate Confluence-ready reports with tables and formatting
+- **Label Analysis**: Break down cycle times by labels
+- **Multiple Output Formats**: 
+  - **Console**: Rich terminal output with colors and emojis
+  - **HTML**: Direct paste into Confluence source editor
+  - **Confluence**: Native wiki markup format
+  - **Markdown**: Standard markdown with tables
+  - **CSV**: Spreadsheet-compatible format for data analysis
 
 ## JQL Query
 
