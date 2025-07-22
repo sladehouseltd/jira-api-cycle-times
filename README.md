@@ -158,7 +158,7 @@ The script searches for issues in the specified project that had their status ch
 - **Summary Statistics**: Average, min, max cycle times across all found issues
 - **Flexible Status Mapping**: Recognizes various status names (In Progress, In Development, etc.)
 - **Component Analysis**: Break down cycle times by JIRA component with rankings
-- **Label Analysis**: Break down cycle times by labels
+- **Label Analysis**: Break down cycle times by labels with rankings
 - **Multiple Output Formats**: 
   - **Console**: Rich terminal output with colors and emojis
   - **HTML**: Direct paste into Confluence source editor
@@ -203,7 +203,16 @@ labels = "urgent" AND
      📋 PROJ-123: Fix login bug - 5 days
      📊 Summary: Avg: 5.5d, Min: 3d, Max: 8d
 
+🏆 LABEL RANKING (by average cycle time):
+   1. urgent: 6.5 days avg (2 tickets)
+   2. bug: 3.5 days avg (4 tickets)
+
 🏷️ LABEL ANALYSIS:
+🏷️ urgent (2 tickets):
+     📋 PROJ-125: Critical security fix - 8 days
+     📋 PROJ-126: Production outage - 5 days
+     📊 Summary: Avg: 6.5d, Min: 5d, Max: 8d
+
 🏷️ bug (4 tickets):
      📋 PROJ-123: Fix login bug - 5 days
      📋 PROJ-124: Button not working - 2 days
@@ -234,6 +243,6 @@ labels = "urgent" AND
 ## 🏷️ LABEL RANKING
 | Rank | Label | Avg Days | Tickets |
 |------|-------|----------|---------|
-| 1 | urgent | 4.5 | 2 |
+| 1 | urgent | 6.5 | 2 |
 | 2 | bug | 3.5 | 4 |
 ```

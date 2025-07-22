@@ -838,18 +838,34 @@ def main():
                     if args.label_analysis:
                         label_data = analyze_labels(issues, jira_client, in_progress_statuses, done_statuses)
                         if label_data:
-                            # Simple HTML label analysis
-                            print("<h2>🏷️ Label Analysis</h2>")
+                            # Calculate statistics for ranking
+                            label_stats = {}
                             for label, tickets in label_data.items():
                                 if tickets:
                                     cycle_times = [ticket['cycle_time'] for ticket in tickets]
-                                    avg_cycle = sum(cycle_times) / len(cycle_times)
-                                    print(f"<h3>🏷️ {label} ({len(tickets)} tickets)</h3>")
-                                    print(f"<p><strong>Average:</strong> {avg_cycle:.1f} days</p>")
-                                    print("<ul>")
-                                    for ticket in tickets:
-                                        print(f"<li>{ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)</li>")
-                                    print("</ul>")
+                                    label_stats[label] = {
+                                        'count': len(tickets),
+                                        'average': sum(cycle_times) / len(cycle_times),
+                                        'tickets': tickets
+                                    }
+                            
+                            # Label ranking summary
+                            print("<h2>🏆 Label Ranking (by average cycle time)</h2>")
+                            sorted_labels = sorted(label_stats.items(), key=lambda x: x[1]['average'], reverse=True)
+                            print("<ol>")
+                            for label, stats in sorted_labels:
+                                print(f"<li><strong>{label}:</strong> {stats['average']:.1f} days avg ({stats['count']} tickets)</li>")
+                            print("</ol>")
+                            
+                            # Detailed label analysis
+                            print("<h2>🏷️ Label Analysis</h2>")
+                            for label, stats in sorted_labels:
+                                print(f"<h3>🏷️ {label} ({stats['count']} tickets)</h3>")
+                                print(f"<p><strong>Average:</strong> {stats['average']:.1f} days</p>")
+                                print("<ul>")
+                                for ticket in stats['tickets']:
+                                    print(f"<li>{ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)</li>")
+                                print("</ul>")
                     
                     # Issues details
                     print(format_html_issues(issues, jira_client, in_progress_statuses, done_statuses))
@@ -930,16 +946,31 @@ def main():
                     if args.label_analysis:
                         label_data = analyze_labels(issues, jira_client, in_progress_statuses, done_statuses)
                         if label_data:
-                            print(f"\nh2. Label Analysis")
+                            # Calculate statistics for ranking
+                            label_stats = {}
                             for label, tickets in label_data.items():
                                 if tickets:
                                     cycle_times = [ticket['cycle_time'] for ticket in tickets]
-                                    avg_cycle = sum(cycle_times) / len(cycle_times)
-                                    print(f"\nh3. {label} ({len(tickets)} tickets)")
-                                    print(f"* *Average:* {avg_cycle:.1f} days")
-                                    print(f"* *Issues:*")
-                                    for ticket in tickets:
-                                        print(f"** {ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)")
+                                    label_stats[label] = {
+                                        'count': len(tickets),
+                                        'average': sum(cycle_times) / len(cycle_times),
+                                        'tickets': tickets
+                                    }
+                            
+                            # Label ranking summary
+                            print(f"\nh2. Label Ranking (by average cycle time)")
+                            sorted_labels = sorted(label_stats.items(), key=lambda x: x[1]['average'], reverse=True)
+                            for i, (label, stats) in enumerate(sorted_labels, 1):
+                                print(f"# *{label}:* {stats['average']:.1f} days avg ({stats['count']} tickets)")
+                            
+                            # Detailed label analysis
+                            print(f"\nh2. Label Analysis")
+                            for label, stats in sorted_labels:
+                                print(f"\nh3. {label} ({stats['count']} tickets)")
+                                print(f"* *Average:* {stats['average']:.1f} days")
+                                print(f"* *Issues:*")
+                                for ticket in stats['tickets']:
+                                    print(f"** {ticket['key']}: {ticket['summary']} ({ticket['cycle_time']} days)")
                     
                     # Issues details
                     print(f"\nh2. Issues Found ({len(issues)} total)")
