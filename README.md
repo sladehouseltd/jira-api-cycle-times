@@ -1,6 +1,9 @@
 # JIRA API Client
 
-A Python script that searches for JIRA issues moved to "Done" status within a date range, filtered by delivery team and labels, and calculates cycle time metrics.
+A collection of Python scripts for JIRA API operations:
+
+1. **jira_client.py** - Searches for JIRA issues moved to "Done" status within a date range, filtered by delivery team and labels, and calculates cycle time metrics.
+2. **jira_column_cleaner.py** - Manages JIRA board column configurations, removing unwanted statuses from columns.
 
 ## Setup
 
@@ -245,4 +248,93 @@ labels = "urgent" AND
 |------|-------|----------|---------|
 | 1 | urgent | 6.5 | 2 |
 | 2 | bug | 3.5 | 4 |
+```
+
+---
+
+# JIRA Column Cleaner
+
+Clean up JIRA board columns by removing unwanted statuses. Useful for boards that have accumulated too many statuses over time.
+
+## Usage
+
+### List all boards
+```bash
+python3 jira_column_cleaner.py --list-boards
+```
+
+### Show board configuration
+```bash
+python3 jira_column_cleaner.py BOARD_ID --show-config
+```
+
+### List statuses in a specific column
+```bash
+python3 jira_column_cleaner.py BOARD_ID --list-column-statuses "In Progress"
+```
+
+### Find status by name
+```bash
+python3 jira_column_cleaner.py --find-status "In Progress"
+```
+
+### Clean column (keep specific statuses)
+```bash
+# Dry run first (recommended)
+python3 jira_column_cleaner.py BOARD_ID "In Progress" "In Progress,In Review" --dry-run
+
+# Actually clean the column
+python3 jira_column_cleaner.py BOARD_ID "In Progress" "In Progress,In Review"
+```
+
+### Remove specific number of statuses (for testing)
+```bash
+# Dry run - remove first 10 statuses
+python3 jira_column_cleaner.py BOARD_ID "In Progress" --remove-count 10 --dry-run
+
+# Actually remove first 10 statuses
+python3 jira_column_cleaner.py BOARD_ID "In Progress" --remove-count 10
+```
+
+## Parameters
+
+- `board_id`: JIRA board ID (found in board URL)
+- `column_name`: Name of the column to clean (e.g. "In Progress", "Development")
+- `keep_statuses`: Comma-separated list of statuses to keep (when not using --remove-count)
+
+## Options
+
+- `--dry-run`: Show what would be changed without making actual changes
+- `--list-boards`: List all accessible boards
+- `--show-config`: Show current board configuration
+- `--list-column-statuses "COLUMN"`: List status names in specified column
+- `--find-status "STATUS"`: Find status ID by name
+- `--remove-count N`: Remove only the first N statuses (useful for incremental cleanup)
+
+## Authentication
+
+Uses the same authentication as jira_client.py (environment variables, .env file, or interactive prompts).
+
+## Important Notes
+
+- **Requires JIRA admin or board admin permissions** to modify board configurations
+- **Safe operation**: Removing statuses from columns doesn't affect existing tickets - they just become "unmapped" from the board view
+- **Always use --dry-run first** to see what will be changed
+- Tickets with removed statuses remain accessible via JQL and issue views
+- **405 Method Not Allowed** error usually means insufficient permissions
+
+## Examples
+
+```bash
+# Find your board
+python3 jira_column_cleaner.py --list-boards
+
+# See what's in the "In Progress" column
+python3 jira_column_cleaner.py 123 --list-column-statuses "In Progress"
+
+# Test removing 5 statuses
+python3 jira_column_cleaner.py 123 "In Progress" --remove-count 5 --dry-run
+
+# Keep only "In Progress" and "Code Review" statuses
+python3 jira_column_cleaner.py 123 "In Progress" "In Progress,Code Review" --dry-run
 ```
