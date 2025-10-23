@@ -63,39 +63,43 @@ python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 202
   --password your_password
 ```
 
-### With component analysis:
+### Analyzing ALL issues by component or label (without label filtering):
 ```bash
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis
+# Group ALL issues by their components (use empty string "" for labels parameter)
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis
+
+# Group ALL issues by their labels (discovers and groups by ALL labels found)
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --label-analysis
+
+# Show both component AND label breakdowns for all issues
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis
+
+# With markdown output (great for Confluence)
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --label-analysis --output-format markdown
+```
+
+### Filtering by specific labels with analysis:
+```bash
+# Filter by specific labels AND show component breakdown
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent" 2024-01-01 2024-01-31 --component-analysis
+
+# Filter by specific labels AND show label breakdown
+python3 jira_client.py PROJ "Frontend Team" "bug,urgent" 2024-01-01 2024-01-31 --label-analysis
 ```
 
 ### With different output formats:
 ```bash
 # HTML output (best for Confluence - paste into source editor)
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format html
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --label-analysis --output-format html
 
 # Confluence wiki markup (native Confluence format)
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format confluence
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --output-format confluence
 
 # CSV format (import as tables)
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format csv
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --output-format csv
 
-# Markdown format
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --output-format markdown
-```
-
-### With analysis features:
-```bash
-# Component analysis only
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --output-format html
-
-# Label analysis only
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --label-analysis --output-format html
-
-# Both component and label analysis
-python3 jira_client.py PROJ "Frontend Team" "bug,urgent,frontend" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format html
-
-# No label filtering (use empty string)
-python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --output-format html
+# Markdown format with both analyses
+python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format markdown
 ```
 
 
@@ -104,6 +108,7 @@ python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component
 - `project_key`: JIRA project prefix (e.g., "PROJ")
 - `delivery_team`: Team name to filter by (searches in "Delivery Team" field)
 - `labels`: Comma-separated labels to filter by (e.g., "bug,urgent,frontend")
+  - **Use `""` (empty string) to NOT filter by labels** - this allows you to analyze ALL issues
 - `start_date`: Start date for search (YYYY-MM-DD)
 - `end_date`: End date for search (YYYY-MM-DD)
 
@@ -116,9 +121,26 @@ python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component
   - `confluence` - Confluence wiki markup (native format)
   - `csv` - CSV format for spreadsheets or table imports
 - `--component-analysis`: Show cycle time breakdown by JIRA component (available in all output formats)
+  - Groups issues by their JIRA components
+  - Shows ranking of components by average cycle time
+  - Works with or without label filtering
 - `--label-analysis`: Show cycle time breakdown by labels (available in all output formats)
+  - Automatically discovers and groups by ALL labels found in matching issues
+  - Shows ranking of labels by average cycle time
+  - **Pro tip:** Use with `""` for labels parameter to analyze ALL issues across ALL labels
 - `--in-progress-statuses`: Comma-separated list of "In Progress" statuses
 - `--done-statuses`: Comma-separated list of "Done" statuses
+
+## Toggling Between Component and Label Analysis
+
+You can toggle between different analysis modes by including/excluding the flags:
+
+| What you want | Command |
+|---------------|---------|
+| **Basic cycle times only** | `python3 jira_client.py PROJ "Team" "" 2024-01-01 2024-01-31` |
+| **Component analysis only** | `python3 jira_client.py PROJ "Team" "" 2024-01-01 2024-01-31 --component-analysis` |
+| **Label analysis only** | `python3 jira_client.py PROJ "Team" "" 2024-01-01 2024-01-31 --label-analysis` |
+| **Both analyses** | `python3 jira_client.py PROJ "Team" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis` |
 
 ## Security Notes
 
@@ -131,18 +153,20 @@ python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component
 ## Examples
 
 ```bash
-# Find issues completed in December 2024 and tag them
-python3 jira_client.py MYPROJ "Backend Team" "database,performance,critical" 2024-12-01 2024-12-31
+# Analyze ALL issues completed in December 2024, grouped by labels
+python3 jira_client.py MYPROJ "Backend Team" "" 2024-12-01 2024-12-31 --label-analysis
 
-# Search for specific team and labels
+# Analyze ALL issues completed in December 2024, grouped by components
+python3 jira_client.py MYPROJ "Backend Team" "" 2024-12-01 2024-12-31 --component-analysis
+
+# Find issues with specific labels only (no grouping analysis)
 python3 jira_client.py TICKET "DevOps Team" "infrastructure,aws" 2024-01-15 2024-01-20
 
-# Search specific week and override URL
-python3 jira_client.py DEV "QA Team" "testing,automation" 2024-01-01 2024-01-07 \
-  --jira-url https://dev-jira.company.com
+# Analyze specific labeled issues grouped by component
+python3 jira_client.py DEV "QA Team" "testing,automation" 2024-01-01 2024-01-07 --component-analysis
 
-# Find issues completed yesterday
-python3 jira_client.py PROJ "Daily Team" "completed,sprint" 2024-01-15 2024-01-15
+# Full analysis - all issues grouped by BOTH components and labels in markdown format
+python3 jira_client.py PROJ "Daily Team" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format markdown
 ```
 
 ## How it works
