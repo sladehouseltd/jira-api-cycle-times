@@ -102,6 +102,24 @@ python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --output-fo
 python3 jira_client.py PROJ "Frontend Team" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format markdown
 ```
 
+### Saving output to a file:
+```bash
+# Save markdown output to a file
+python3 jira_client.py PROJ "Team Name" "" 2024-01-01 2024-01-31 --label-analysis --output-format markdown > output.md
+
+# Save component analysis to a markdown file
+python3 jira_client.py PROJ "Team Name" "" 2024-01-01 2024-01-31 --component-analysis --output-format markdown > components_report.md
+
+# Save both analyses to a file
+python3 jira_client.py PROJ "Team Name" "" 2024-01-01 2024-01-31 --component-analysis --label-analysis --output-format markdown > full_report.md
+
+# Save HTML output to a file (for Confluence)
+python3 jira_client.py PROJ "Team Name" "" 2024-01-01 2024-01-31 --label-analysis --output-format html > confluence_report.html
+
+# Save CSV output to a file (for spreadsheets)
+python3 jira_client.py PROJ "Team Name" "" 2024-01-01 2024-01-31 --output-format csv > issues.csv
+```
+
 
 ## Parameters
 
